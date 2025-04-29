@@ -6,10 +6,16 @@ const alertSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
     },
-    medicationId: {
+    medId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Medication',
         required: true,
+    },
+    type: {
+        type: String,
+        enum: ['Push', 'SMS', 'Email'],
+        required: true,
+        default: 'Push',
     },
     alertTime: {
         type: Date,
@@ -17,8 +23,8 @@ const alertSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['active', 'completed'],
-        default: 'active',
+        enum: ['Delivered', 'Not Delivered'],
+        default: 'Not Delivered',
     },
 }, {
     timestamps: true,

@@ -53,7 +53,7 @@ exports.getMedicationSchedulesByMedicationId = async (req, res) => {
     }
 };
 
-// Update a medication schedule
+
 exports.updateMedicationSchedule = async (req, res) => {
     try {
         const updatedSchedule = await MedicationSchedule.findByIdAndUpdate(
