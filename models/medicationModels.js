@@ -18,6 +18,15 @@ const medicationSchema = new mongoose.Schema({
     },
     pillImage: {
         type: String
+    },
+    time: {
+        type: String,
+        required: true
+    },
+    status: {
+        type: String,
+        enum: ['Pending', 'Taken', 'Missed'],
+        default: 'Pending'
     }
 }, {
     timestamps: true
