@@ -1,11 +1,31 @@
 const Medication = require('../models/medicationModels');
 
-// Add a new medication
 exports.addMedication = async (req, res) => {
     try {
-        const { name, description, dosage, frequency, startDate, endDate } = req.body;
+        const {
+            name,
+            description,
+            dosageForm,
+            strength,
+            manufacturer,
+            prescriptionRequired,
+            sideEffects,
+            interactions,
+            active
+        } = req.body;
 
-        const medication = new Medication({ name, description, dosage, frequency, startDate, endDate });
+        const medication = new Medication({
+            name,
+            description,
+            dosageForm,
+            strength,
+            manufacturer,
+            prescriptionRequired,
+            sideEffects,
+            interactions,
+            active
+        });
+
         await medication.save();
         res.status(201).json(medication);
     } catch (error) {
