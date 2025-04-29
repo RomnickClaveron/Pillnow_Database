@@ -14,17 +14,16 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    role: {
-        type: String,
-        enum: ['patient', 'caregiver', 'admin'],
-        default: 'patient'
+    age: {
+        type: Number
     },
-    deviceId: {
+    phone: {
         type: String
     },
-    active: {
-        type: Boolean,
-        default: true
+    role: {
+        type: String,
+        enum: ['patient', 'caregiver'],
+        required: true
     }
 }, {
     timestamps: true

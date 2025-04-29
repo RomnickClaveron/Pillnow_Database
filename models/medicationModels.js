@@ -1,21 +1,25 @@
 const mongoose = require('mongoose');
 
 const medicationSchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     name: {
         type: String,
         required: true
     },
-    strength: {
-        amount: Number,
-        unit: String
+    dosage: {
+        type: String
     },
-    manufacturer: String,
-    prescriptionRequired: {
-        type: Boolean,
-        default: true
+    frequency: {
+        type: String
     },
-},
- {
+    pillImage: {
+        type: String
+    }
+}, {
     timestamps: true
 });
 
