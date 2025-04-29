@@ -5,12 +5,6 @@ const medicationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    description: String,
-    dosageForm: {
-        type: String,
-        enum: ['tablet', 'capsule', 'liquid', 'injection', 'other'],
-        required: true
-    },
     strength: {
         amount: Number,
         unit: String
@@ -20,13 +14,8 @@ const medicationSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-    sideEffects: [String],
-    interactions: [String],
-    active: {
-        type: Boolean,
-        default: true
-    }
-}, {
+},
+ {
     timestamps: true
 });
 
