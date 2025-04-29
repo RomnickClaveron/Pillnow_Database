@@ -21,7 +21,7 @@ router.get('/type/:type', alertsController.getAlertsByType);
 router.get('/status/:status', alertsController.getAlertsByStatus);
 
 // Update alert status
-router.patch('/:id/status', alertsController.updateAlertStatus);
+router.put('/:id/status', alertsController.updateAlertStatus);
 
 // Update an alert
 router.put('/:id', alertsController.updateAlert);

@@ -1,24 +1,30 @@
 const mongoose = require('mongoose');
 
-const deviceLogsSchema = new mongoose.Schema({
+const deviceLogSchema = new mongoose.Schema({
     deviceId: {
         type: String,
-        required: true,
+        required: true
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: true
     },
     action: {
         type: String,
-        enum: ['AlarmTriggered', 'AlarmCleared', 'MedicationTaken', 'MedicationMissed', 'MedicationReminderSent', 'MedicationReminderCleared'],
-        default: 'AlarmTriggered',
-        required: true,
-    
+        enum: ['dispense', 'refill', 'error', 'maintenance', 'other'],
+        required: true
     },
+    details: {
+        type: Object
+    },
+    status: {
+        type: String,
+        enum: ['success', 'failure', 'pending'],
+        default: 'success'
+    }
 }, {
-    timestamps: true,
+    timestamps: true
 });
 
-module.exports = mongoose.model('DeviceLogs', deviceLogsSchema);
+module.exports = mongoose.model('DeviceLog', deviceLogSchema);

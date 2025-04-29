@@ -1,31 +1,33 @@
 const mongoose = require('mongoose');
 
 const medicationSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-    },
     name: {
         type: String,
-        required: true,
+        required: true
     },
-    Dosage: {
+    description: String,
+    dosageForm: {
         type: String,
-        required: true,
+        enum: ['tablet', 'capsule', 'liquid', 'injection', 'other'],
+        required: true
     },
-    frequency: {
-        type: String,
-        enum: ['once', 'twice', 'thrice'],
-        required: true,
+    strength: {
+        amount: Number,
+        unit: String
     },
-    pill_image: {
-        type: String,
-        required: true,
+    manufacturer: String,
+    prescriptionRequired: {
+        type: Boolean,
+        default: true
     },
-
+    sideEffects: [String],
+    interactions: [String],
+    active: {
+        type: Boolean,
+        default: true
+    }
 }, {
-    timestamps: true,
+    timestamps: true
 });
 
-exports.Medication = mongoose.model('Medication', medicationSchema);
+module.exports = mongoose.model('Medication', medicationSchema);

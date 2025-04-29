@@ -11,25 +11,50 @@ const medSchedSchema = new mongoose.Schema({
         ref: 'Medication',
         required: true,
     },
-    time: {
-            type: Date,
+    scheduledTime: {
+        type: Date,
         required: true,
     },
+    frequency: {
+        type: String,
+        enum: ['once', 'daily', 'weekly', 'monthly'],
+        required: true,
+    },
+    daysOfWeek: [{
+        type: String,
+        enum: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    }],
+    timesPerDay: [{
+        time: String,
+        taken: {
+            type: Boolean,
+            default: false
+        }
+    }],
+    startDate: {
+        type: Date,
+        required: true,
+    },
+    endDate: Date,
     status: {
         type: String,
-        enum: ['Pending', 'Taken', 'Missed'],
-        default: 'Pending',
-
+        enum: ['active', 'completed', 'cancelled'],
+        default: 'active',
     },
+    dosage: {
+        amount: Number,
+        unit: String
+    },
+    notes: String,
     alert_sent: {
         type: Boolean,
         default: false,
-    },  
+    }
 }, {
-    timestamps: true,
+    timestamps: true
 });
 
-const MedSched = mongoose.model('MedSched', medSchedSchema);
+module.exports = mongoose.model('MedSched', medSchedSchema);
 
 
 

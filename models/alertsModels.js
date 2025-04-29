@@ -4,30 +4,34 @@ const alertSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: true
     },
-    medId: {
+    scheduleId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Medication',
-        required: true,
+        ref: 'MedSched',
+        required: true
     },
     type: {
         type: String,
-        enum: ['Push', 'SMS', 'Email'],
-        required: true,
-        default: 'Push',
+        enum: ['missed', 'upcoming', 'refill', 'other'],
+        required: true
     },
-    alertTime: {
-        type: Date,
-        required: true,
+    message: {
+        type: String,
+        required: true
     },
     status: {
         type: String,
-        enum: ['Delivered', 'Not Delivered'],
-        default: 'Not Delivered',
+        enum: ['pending', 'sent', 'read', 'actioned'],
+        default: 'pending'
     },
+    priority: {
+        type: String,
+        enum: ['low', 'medium', 'high'],
+        default: 'medium'
+    }
 }, {
-    timestamps: true,
+    timestamps: true
 });
 
-exports.Alert = mongoose.model('Alert', alertSchema);
+module.exports = mongoose.model('Alert', alertSchema);
