@@ -1,33 +1,29 @@
 const mongoose = require('mongoose');
 const Counter = require('./counterModels');
 
-const userSchema = new mongoose.Schema({
-    userId: {
+const alertSchema = new mongoose.Schema({
+    alertId: {
         type: Number,
         unique: true
     },
-    name: {
-        type: String,
+    user: {
+        type: Number,
+        ref: 'User',
         required: true
     },
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    password: {
-        type: String,
+    medication: {
+        type: Number,
+        ref: 'Medication',
         required: true
     },
-    age: {
-        type: Number
-    },
-    phone: {
-        type: String
-    },
-    role: {
+    type: {
         type: String,
-        enum: ['patient', 'caregiver'],
+        enum: ['Push', 'SMS', 'Email'],
+        required: true
+    },
+    status: {
+        type: String,
+        enum: ['Delivered', 'Failed'],
         required: true
     }
 }, {
@@ -35,19 +31,16 @@ const userSchema = new mongoose.Schema({
 });
 
 // Pre-save middleware to generate sequential ID
-userSchema.pre('save', async function(next) {
-    if (!this.userId) {
+alertSchema.pre('save', async function(next) {
+    if (!this.alertId) {
         const counter = await Counter.findByIdAndUpdate(
-            { _id: 'userId' },
+            { _id: 'alertId' },
             { $inc: { seq: 1 } },
             { new: true, upsert: true }
         );
-        this.userId = counter.seq;
+        this.alertId = counter.seq;
     }
     next();
 });
 
-module.exports = mongoose.model('User', userSchema);
-
-
-
+module.exports = mongoose.model('Alert', alertSchema); 
