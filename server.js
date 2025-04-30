@@ -66,9 +66,9 @@ const alertsRoutes = require('./routes/alertsRoutes');
 const userRoutes = require('./routes/userRoutes');
 const medicationRoutes = require('./routes/medicationRoutes');
 
-app.use('/api/device-logs', deviceLogsRoutes);
-app.use('/api/medication-schedules', medicationScheduleRoutes);
-app.use('/api/pill-identification', pillIdentificationRoutes);
+app.use('/api/device_logs', deviceLogsRoutes);
+app.use('/api/medication_schedules', medicationScheduleRoutes);
+app.use('/api/pill_identification', pillIdentificationRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/medications', medicationRoutes);
