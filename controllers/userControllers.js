@@ -3,8 +3,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // Generate JWT
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET || 'your_jwt_secret', {
+const generateToken = (userId) => {
+    return jwt.sign({ userId }, process.env.JWT_SECRET || 'your_jwt_secret', {
         expiresIn: '30d',
     });
 };
@@ -39,7 +39,7 @@ exports.registerUser = async (req, res) => {
         });
 
         res.status(201).json({
-            _id: user._id,
+            userId: user.userId,
             name: user.name,
             email: user.email,
             role: user.role
@@ -67,11 +67,11 @@ exports.loginUser = async (req, res) => {
         }
 
         res.json({
-            _id: user._id,
+            userId: user.userId,
             name: user.name,
             email: user.email,
             role: user.role,
-            token: generateToken(user._id)
+            token: generateToken(user.userId)
         });
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -81,17 +81,17 @@ exports.loginUser = async (req, res) => {
 // Get all users (admin only)
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find().select('-password');
+        const users = await User.find().select('-password -_id');
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// Get user by ID (admin or self)
+// Get user by userId (admin or self)
 exports.getUserById = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id).select('-password');
+        const user = await User.findOne({ userId: req.params.id }).select('-password -_id');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -104,7 +104,7 @@ exports.getUserById = async (req, res) => {
 // Update user (admin or self)
 exports.updateUser = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findOne({ userId: req.params.id });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -125,11 +125,11 @@ exports.updateUser = async (req, res) => {
             req.body.password = await bcrypt.hash(req.body.password, salt);
         }
 
-        const updatedUser = await User.findByIdAndUpdate(
-            req.params.id,
+        const updatedUser = await User.findOneAndUpdate(
+            { userId: req.params.id },
             req.body,
             { new: true }
-        ).select('-password');
+        ).select('-password -_id');
 
         res.json(updatedUser);
     } catch (error) {
@@ -140,20 +140,20 @@ exports.updateUser = async (req, res) => {
 // Delete user (admin or self)
 exports.deleteUser = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findOne({ userId: req.params.id });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         // Prevent admin from deleting themselves (optional safety measure)
         const requestingUser = req.user;
-        if (requestingUser.role === 'admin' && requestingUser._id.toString() === req.params.id) {
+        if (requestingUser.role === 'admin' && requestingUser.userId == req.params.id) {
             return res.status(400).json({ 
                 message: 'Admin cannot delete their own account for security reasons' 
             });
         }
 
-        await User.findByIdAndDelete(req.params.id);
+        await User.findOneAndDelete({ userId: req.params.id });
         res.json({ message: 'User removed successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -163,7 +163,7 @@ exports.deleteUser = async (req, res) => {
 // Get current user profile
 exports.getCurrentUser = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id).select('-password');
+        const user = await User.findOne({ userId: req.user.userId }).select('-password -_id');
         res.json(user);
     } catch (error) {
         res.status(500).json({ message: error.message });

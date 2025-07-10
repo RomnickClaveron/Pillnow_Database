@@ -13,8 +13,8 @@ const protect = async (req, res, next) => {
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
 
-            // Get user from token
-            req.user = await User.findById(decoded.id).select('-password');
+            // Get user from token using userId
+            req.user = await User.findOne({ userId: decoded.userId }).select('-password');
 
             next();
         } catch (error) {
@@ -41,7 +41,7 @@ const adminOnly = (req, res, next) => {
 const selfOrAdmin = (req, res, next) => {
     const targetUserId = req.params.id;
     
-    if (req.user && (req.user.role === 'admin' || req.user._id.toString() === targetUserId)) {
+    if (req.user && (req.user.role === 'admin' || req.user.userId == targetUserId)) {
         next();
     } else {
         res.status(403).json({ message: 'Access denied. You can only access your own account or admin access required.' });
@@ -52,7 +52,7 @@ const selfOrAdmin = (req, res, next) => {
 const adminOrSelf = (req, res, next) => {
     const targetUserId = req.params.id;
     
-    if (req.user && (req.user.role === 'admin' || req.user._id.toString() === targetUserId)) {
+    if (req.user && (req.user.role === 'admin' || req.user.userId == targetUserId)) {
         next();
     } else {
         res.status(403).json({ message: 'Access denied. You can only modify your own account or admin access required.' });
