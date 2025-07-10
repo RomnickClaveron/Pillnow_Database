@@ -20,6 +20,12 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: 'User already exists' });
         }
 
+        // Validate role
+        const validRoles = ['admin', 'elder', 'guardian'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({ message: 'Invalid role. Must be admin, elder, or guardian' });
+        }
+
         // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -72,7 +78,7 @@ exports.loginUser = async (req, res) => {
     }
 };
 
-// Get all users
+// Get all users (admin only)
 exports.getAllUsers = async (req, res) => {
     try {
         const users = await User.find().select('-password');
@@ -82,7 +88,7 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
-// Get user by ID
+// Get user by ID (admin or self)
 exports.getUserById = async (req, res) => {
     try {
         const user = await User.findById(req.params.id).select('-password');
@@ -95,7 +101,7 @@ exports.getUserById = async (req, res) => {
     }
 };
 
-// Update user
+// Update user (admin or self)
 exports.updateUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -103,6 +109,17 @@ exports.updateUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        // Role-based validation
+        const requestingUser = req.user;
+        
+        // If not admin, prevent role changes
+        if (requestingUser.role !== 'admin' && req.body.role) {
+            return res.status(403).json({ 
+                message: 'Only admins can change user roles' 
+            });
+        }
+
+        // If updating password, hash it
         if (req.body.password) {
             const salt = await bcrypt.genSalt(10);
             req.body.password = await bcrypt.hash(req.body.password, salt);
@@ -120,7 +137,7 @@ exports.updateUser = async (req, res) => {
     }
 };
 
-// Delete user
+// Delete user (admin or self)
 exports.deleteUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -128,8 +145,26 @@ exports.deleteUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        await user.remove();
-        res.json({ message: 'User removed' });
+        // Prevent admin from deleting themselves (optional safety measure)
+        const requestingUser = req.user;
+        if (requestingUser.role === 'admin' && requestingUser._id.toString() === req.params.id) {
+            return res.status(400).json({ 
+                message: 'Admin cannot delete their own account for security reasons' 
+            });
+        }
+
+        await User.findByIdAndDelete(req.params.id);
+        res.json({ message: 'User removed successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get current user profile
+exports.getCurrentUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select('-password');
+        res.json(user);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
