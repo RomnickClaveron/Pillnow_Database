@@ -3,7 +3,7 @@ const Counter = require('./counterModels');
 
 const userSchema = new mongoose.Schema({
     userId: {
-        type: Number,
+        type: ObjectId,
         unique: true
     },
     name: {
