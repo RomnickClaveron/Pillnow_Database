@@ -9,6 +9,7 @@ router.post('/login', userController.loginUser);
 
 // Protected routes (authentication required)
 router.get('/profile', protect, userController.getCurrentUser);
+// NOTE: :id refers to userId (auto-incremented), not _id
 router.get('/', protect, adminOnly, userController.getAllUsers);
 router.get('/:id', protect, selfOrAdmin, userController.getUserById);
 router.put('/:id', protect, adminOrSelf, userController.updateUser);
