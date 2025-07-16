@@ -1,6 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModels');
 
+// Role constants
+const ROLE_ADMIN = 1;
+const ROLE_ELDER = 2;
+const ROLE_GUARDIAN = 3;
+
 // Protect routes - verify token
 const protect = async (req, res, next) => {
     let token;
@@ -30,7 +35,7 @@ const protect = async (req, res, next) => {
 
 // Admin authorization - only admins can access
 const adminOnly = (req, res, next) => {
-    if (req.user && req.user.role === 'admin') {
+    if (req.user && req.user.role === ROLE_ADMIN) {
         next();
     } else {
         res.status(403).json({ message: 'Access denied. Admin role required.' });
@@ -41,7 +46,7 @@ const adminOnly = (req, res, next) => {
 const selfOrAdmin = (req, res, next) => {
     const targetUserId = req.params.id;
     
-    if (req.user && (req.user.role === 'admin' || req.user.userId == targetUserId)) {
+    if (req.user && (req.user.role === ROLE_ADMIN || req.user.userId == targetUserId)) {
         next();
     } else {
         res.status(403).json({ message: 'Access denied. You can only access your own account or admin access required.' });
@@ -52,7 +57,7 @@ const selfOrAdmin = (req, res, next) => {
 const adminOrSelf = (req, res, next) => {
     const targetUserId = req.params.id;
     
-    if (req.user && (req.user.role === 'admin' || req.user.userId == targetUserId)) {
+    if (req.user && (req.user.role === ROLE_ADMIN || req.user.userId == targetUserId)) {
         next();
     } else {
         res.status(403).json({ message: 'Access denied. You can only modify your own account or admin access required.' });

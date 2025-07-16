@@ -2,6 +2,11 @@ const User = require('../models/userModels');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// Role constants
+const ROLE_ADMIN = 1;
+const ROLE_ELDER = 2;
+const ROLE_GUARDIAN = 3;
+
 // Generate JWT
 const generateToken = (userId) => {
     return jwt.sign({ userId }, process.env.JWT_SECRET || 'your_jwt_secret', {
@@ -20,10 +25,10 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Validate role
-        const validRoles = ['admin', 'elder', 'guardian'];
+        // Validate role (must be 1, 2, or 3)
+        const validRoles = [ROLE_ADMIN, ROLE_ELDER, ROLE_GUARDIAN];
         if (!validRoles.includes(role)) {
-            return res.status(400).json({ message: 'Invalid role. Must be admin, elder, or guardian' });
+            return res.status(400).json({ message: 'Invalid role. Must be 1 (admin), 2 (elder), or 3 (guardian)' });
         }
 
         // Hash password
@@ -113,7 +118,7 @@ exports.updateUser = async (req, res) => {
         const requestingUser = req.user;
         
         // If not admin, prevent role changes
-        if (requestingUser.role !== 'admin' && req.body.role) {
+        if (requestingUser.role !== ROLE_ADMIN && req.body.role) {
             return res.status(403).json({ 
                 message: 'Only admins can change user roles' 
             });
@@ -147,7 +152,7 @@ exports.deleteUser = async (req, res) => {
 
         // Prevent admin from deleting themselves (optional safety measure)
         const requestingUser = req.user;
-        if (requestingUser.role === 'admin' && requestingUser.userId == req.params.id) {
+        if (requestingUser.role === ROLE_ADMIN && requestingUser.userId == req.params.id) {
             return res.status(400).json({ 
                 message: 'Admin cannot delete their own account for security reasons' 
             });
