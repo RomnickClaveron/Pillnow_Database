@@ -145,6 +145,7 @@ exports.updateUser = async (req, res) => {
 // Delete user (admin or self)
 exports.deleteUser = async (req, res) => {
     try {
+        console.log('req.params.id:', req.params.id, 'Type:', typeof req.params.id);
         const user = await User.findOne({ userId: req.params.id });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
