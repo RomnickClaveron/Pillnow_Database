@@ -3,7 +3,7 @@ const Counter = require('./counterModels');
 
 const userSchema = new mongoose.Schema({
     userId: {
-        type: Number,
+        type: String,
         unique: true
     },
     name: {
@@ -43,7 +43,7 @@ userSchema.pre('save', async function(next) {
             { $inc: { seq: 1 } },
             { new: true, upsert: true }
         );
-        this.userId = counter.seq;
+        this.userId = counter.seq.toString(); // Ensure userId is a string
     }
     next();
 });
