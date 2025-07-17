@@ -145,21 +145,22 @@ exports.updateUser = async (req, res) => {
 // Delete user (admin or self)
 exports.deleteUser = async (req, res) => {
     try {
+        const userIdStr = req.params.id.toString();
         console.log('req.params.id:', req.params.id, 'Type:', typeof req.params.id);
-        const user = await User.findOne({ userId: req.params.id });
+        const user = await User.findOne({ userId: userIdStr });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         // Prevent admin from deleting themselves (optional safety measure)
         const requestingUser = req.user;
-        if (requestingUser.role === ROLE_ADMIN && requestingUser.userId == req.params.id) {
+        if (requestingUser.role === ROLE_ADMIN && requestingUser.userId == userIdStr) {
             return res.status(400).json({ 
                 message: 'Admin cannot delete their own account for security reasons' 
             });
         }
 
-        await User.findOneAndDelete({ userId: req.params.id });
+        await User.findOneAndDelete({ userId: userIdStr });
         res.json({ message: 'User removed successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
