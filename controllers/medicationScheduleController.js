@@ -7,9 +7,25 @@ exports.createMedicationSchedule = async (req, res) => {
         console.log('Request headers:', req.headers);
         console.log('Content-Type:', req.headers['content-type']);
         
+        // Validate required fields
+        if (!req.body.user || !req.body.medication || !req.body.date || !req.body.time) {
+            return res.status(400).json({ 
+                message: 'Missing required fields: user, medication, date, and time are required' 
+            });
+        }
+        
+        // Validate date format
+        const dateValue = new Date(req.body.date);
+        if (isNaN(dateValue.getTime())) {
+            return res.status(400).json({ 
+                message: 'Invalid date format. Please provide a valid date (YYYY-MM-DD or ISO string)' 
+            });
+        }
+        
         const schedule = new MedicationSchedule({
             user: req.body.user,
             medication: req.body.medication,
+            date: dateValue,
             time: req.body.time,
             status: req.body.status || 'Pending',
             alertSent: req.body.alertSent || false

@@ -16,6 +16,10 @@ const medicationScheduleSchema = new mongoose.Schema({
         ref: 'Medication',
         required: true
     },
+    date: {
+        type: Date,
+        required: true
+    },
     time: {
         type: String,
         required: true
