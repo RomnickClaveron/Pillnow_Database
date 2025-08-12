@@ -20,6 +20,12 @@ router.get('/user/:userId', medicationScheduleController.getMedicationSchedulesB
 // Get medication schedules by medication ID
 router.get('/medication/:medicationId', medicationScheduleController.getMedicationSchedulesByMedicationId);
 
+// Get medication schedules by container ID
+router.get('/container/:containerId', medicationScheduleController.getMedicationSchedulesByContainerId);
+
+// Get medication schedules by user and container
+router.get('/user/:userId/container/:containerId', medicationScheduleController.getMedicationSchedulesByUserAndContainer);
+
 // Update a medication schedule
 router.put('/:id', medicationScheduleController.updateMedicationSchedule);
 

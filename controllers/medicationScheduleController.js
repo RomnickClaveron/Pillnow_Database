@@ -10,14 +10,21 @@ exports.createMedicationSchedule = async (req, res) => {
         // Validate required fields
         if (!req.body.user || !req.body.medication || !req.body.date || !req.body.time) {
             return res.status(400).json({ 
+                success: false,
                 message: 'Missing required fields: user, medication, date, and time are required' 
             });
+        }
+        
+        // Validate container field
+        if (!req.body.container) {
+            console.log('No container specified, using default');
         }
         
         // Validate date format
         const dateValue = new Date(req.body.date);
         if (isNaN(dateValue.getTime())) {
             return res.status(400).json({ 
+                success: false,
                 message: 'Invalid date format. Please provide a valid date (YYYY-MM-DD or ISO string)' 
             });
         }
@@ -25,16 +32,27 @@ exports.createMedicationSchedule = async (req, res) => {
         const schedule = new MedicationSchedule({
             user: req.body.user,
             medication: req.body.medication,
+            container: req.body.container || 'default',
             date: dateValue,
             time: req.body.time,
             status: req.body.status || 'Pending',
             alertSent: req.body.alertSent || false
         });
+        
         const savedSchedule = await schedule.save();
-        res.status(201).json(savedSchedule);
+        
+        res.status(201).json({
+            success: true,
+            message: 'Medication schedule created successfully',
+            data: savedSchedule
+        });
+        
     } catch (error) {
         console.log('Error:', error.message);
-        res.status(400).json({ message: error.message });
+        res.status(400).json({ 
+            success: false,
+            message: error.message 
+        });
     }
 };
 
@@ -87,12 +105,55 @@ exports.getMedicationSchedulesByMedicationId = async (req, res) => {
     }
 };
 
+// Get medication schedules by container ID
+exports.getMedicationSchedulesByContainerId = async (req, res) => {
+    try {
+        const schedules = await MedicationSchedule.find({ container: req.params.containerId });
+        res.status(200).json({
+            success: true,
+            count: schedules.length,
+            containerId: req.params.containerId,
+            data: schedules
+        });
+    } catch (error) {
+        console.error('Error in getMedicationSchedulesByContainerId:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get medication schedules by user and container
+exports.getMedicationSchedulesByUserAndContainer = async (req, res) => {
+    try {
+        const { userId, containerId } = req.params;
+        const schedules = await MedicationSchedule.find({ 
+            user: userId, 
+            container: containerId 
+        });
+        res.status(200).json({
+            success: true,
+            count: schedules.length,
+            userId: userId,
+            containerId: containerId,
+            data: schedules
+        });
+    } catch (error) {
+        console.error('Error in getMedicationSchedulesByUserAndContainer:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 
 exports.updateMedicationSchedule = async (req, res) => {
     try {
+        const updateData = {
+            ...req.body,
+            // Ensure container field is included in updates
+            container: req.body.container || 'default'
+        };
+        
         const updatedSchedule = await MedicationSchedule.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            updateData,
             { new: true }
         );
         res.status(200).json(updatedSchedule);
