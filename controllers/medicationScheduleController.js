@@ -69,20 +69,34 @@ exports.getAllMedicationSchedules = async (req, res) => {
         console.log(`Found ${schedules.length} schedules`);
         console.log('Schedules data:', JSON.stringify(schedules, null, 2));
         
+        // Transform data for frontend compatibility
+        const transformedSchedules = schedules.map(schedule => ({
+            ...schedule,
+            // Ensure consistent data types
+            user: Number(schedule.user),
+            medication: Number(schedule.medication),
+            container: String(schedule.container || 'default'),
+            // Format date for frontend
+            date: schedule.date ? new Date(schedule.date).toISOString().split('T')[0] : null,
+            time: String(schedule.time || ''),
+            status: String(schedule.status || 'Pending'),
+            alertSent: Boolean(schedule.alertSent)
+        }));
+        
         // Check if client wants old format (for backward compatibility)
         const useOldFormat = req.query.format === 'old' || req.query.legacy === 'true';
         
         if (useOldFormat) {
             // Return old format (direct array)
             console.log('Returning old format for backward compatibility');
-            res.status(200).json(schedules);
+            res.status(200).json(transformedSchedules);
         } else {
             // Return new format (structured response)
             console.log('Returning new structured format');
             res.status(200).json({
                 success: true,
-                count: schedules.length,
-                data: schedules,
+                count: transformedSchedules.length,
+                data: transformedSchedules,
                 timestamp: new Date().toISOString()
             });
         }
@@ -122,12 +136,26 @@ exports.getMedicationSchedulesByMedicationId = async (req, res) => {
 // Get medication schedules by container ID
 exports.getMedicationSchedulesByContainerId = async (req, res) => {
     try {
-        const schedules = await MedicationSchedule.find({ container: req.params.containerId });
+        const schedules = await MedicationSchedule.find({ container: req.params.containerId }).lean();
+        
+        // Transform data for frontend compatibility
+        const transformedSchedules = schedules.map(schedule => ({
+            ...schedule,
+            user: Number(schedule.user),
+            medication: Number(schedule.medication),
+            container: String(schedule.container),
+            date: schedule.date ? new Date(schedule.date).toISOString().split('T')[0] : null,
+            time: String(schedule.time || ''),
+            status: String(schedule.status || 'Pending'),
+            alertSent: Boolean(schedule.alertSent)
+        }));
+        
         res.status(200).json({
             success: true,
-            count: schedules.length,
+            count: transformedSchedules.length,
             containerId: req.params.containerId,
-            data: schedules
+            data: transformedSchedules,
+            timestamp: new Date().toISOString()
         });
     } catch (error) {
         console.error('Error in getMedicationSchedulesByContainerId:', error);
@@ -241,6 +269,63 @@ exports.debugModel = async (req, res) => {
             success: false,
             message: 'Model debug failed',
             error: error.message
+        });
+    }
+};
+
+// Get container status summary
+exports.getContainerStatusSummary = async (req, res) => {
+    try {
+        const { containerId } = req.params;
+        
+        // Get all schedules for this container
+        const schedules = await MedicationSchedule.find({ container: containerId }).lean();
+        
+        // Group by status
+        const statusSummary = {
+            pending: schedules.filter(s => s.status === 'Pending').length,
+            taken: schedules.filter(s => s.status === 'Taken').length,
+            missed: schedules.filter(s => s.status === 'Missed').length,
+            total: schedules.length
+        };
+        
+        // Get today's schedules
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const todaySchedules = schedules.filter(schedule => {
+            const scheduleDate = new Date(schedule.date);
+            return scheduleDate >= today && scheduleDate < tomorrow;
+        });
+        
+        // Transform data for frontend
+        const transformedSchedules = schedules.map(schedule => ({
+            ...schedule,
+            user: Number(schedule.user),
+            medication: Number(schedule.medication),
+            container: String(schedule.container),
+            date: schedule.date ? new Date(schedule.date).toISOString().split('T')[0] : null,
+            time: String(schedule.time || ''),
+            status: String(schedule.status || 'Pending'),
+            alertSent: Boolean(schedule.alertSent)
+        }));
+        
+        res.status(200).json({
+            success: true,
+            containerId: containerId,
+            statusSummary: statusSummary,
+            todaySchedules: todaySchedules.length,
+            data: transformedSchedules,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Error in getContainerStatusSummary:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 }; 

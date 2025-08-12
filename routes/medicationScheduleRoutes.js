@@ -23,6 +23,9 @@ router.get('/medication/:medicationId', medicationScheduleController.getMedicati
 // Get medication schedules by container ID
 router.get('/container/:containerId', medicationScheduleController.getMedicationSchedulesByContainerId);
 
+// Get container status summary
+router.get('/container/:containerId/summary', medicationScheduleController.getContainerStatusSummary);
+
 // Get medication schedules by user and container
 router.get('/user/:userId/container/:containerId', medicationScheduleController.getMedicationSchedulesByUserAndContainer);
 

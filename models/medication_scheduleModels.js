@@ -19,7 +19,14 @@ const medicationScheduleSchema = new mongoose.Schema({
     container: {
         type: String,
         required: true,
-        default: 'default'
+        default: 'default',
+        trim: true,
+        validate: {
+            validator: function(v) {
+                return v && v.length > 0;
+            },
+            message: 'Container ID cannot be empty'
+        }
     },
     date: {
         type: Date,
@@ -27,7 +34,14 @@ const medicationScheduleSchema = new mongoose.Schema({
     },
     time: {
         type: String,
-        required: true
+        required: true,
+        validate: {
+            validator: function(v) {
+                // Basic time format validation (HH:MM)
+                return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
+            },
+            message: 'Time must be in HH:MM format (e.g., 08:00)'
+        }
     },
     status: {
         type: String,
