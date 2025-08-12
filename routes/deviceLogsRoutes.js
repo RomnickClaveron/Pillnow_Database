@@ -17,6 +17,18 @@ router.get('/user/:userId', deviceLogsController.getDeviceLogsByUserId);
 // Get device logs by action type
 router.get('/action/:action', deviceLogsController.getDeviceLogsByAction);
 
+// Get device logs by medication ID
+router.get('/medication/:medicationId', deviceLogsController.getDeviceLogsByMedicationId);
+
+// Get current device status for display
+router.get('/status/:deviceId', deviceLogsController.getDeviceCurrentStatus);
+
+// Get user's device overview
+router.get('/overview/user/:userId', deviceLogsController.getUserDeviceOverview);
+
+// Get real-time dashboard data
+router.get('/dashboard', deviceLogsController.getDeviceDashboard);
+
 // Update a device log
 router.put('/:id', deviceLogsController.updateDeviceLog);
 

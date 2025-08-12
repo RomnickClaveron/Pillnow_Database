@@ -8,6 +8,12 @@ router.post('/', medicationScheduleController.createMedicationSchedule);
 // Get all medication schedules
 router.get('/', medicationScheduleController.getAllMedicationSchedules);
 
+// Test connection endpoint (must come before parameterized routes)
+router.get('/test/connection', medicationScheduleController.testConnection);
+
+// Debug endpoint to check model and schema
+router.get('/debug/model', medicationScheduleController.debugModel);
+
 // Get medication schedules by user ID
 router.get('/user/:userId', medicationScheduleController.getMedicationSchedulesByUserId);
 

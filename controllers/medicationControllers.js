@@ -3,27 +3,21 @@ const Medication = require('../models/medicationModels');
 exports.addMedication = async (req, res) => {
     try {
         const {
+            user,
             name,
-            description,
-            dosageForm,
-            strength,
-            manufacturer,
-            prescriptionRequired,
-            sideEffects,
-            interactions,
-            active
+            dosage,
+            frequency,
+            pillImage,
+            schedule
         } = req.body;
 
         const medication = new Medication({
+            user,
             name,
-            description,
-            dosageForm,
-            strength,
-            manufacturer,
-            prescriptionRequired,
-            sideEffects,
-            interactions,
-            active
+            dosage,
+            frequency,
+            pillImage,
+            schedule
         });
 
         await medication.save();
@@ -36,7 +30,7 @@ exports.addMedication = async (req, res) => {
 // Get all medications
 exports.getAllMedications = async (req, res) => {
     try {
-        const medications = await Medication.find();
+        const medications = await Medication.find().populate('user');
         res.status(200).json(medications);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -46,7 +40,7 @@ exports.getAllMedications = async (req, res) => {
 // Get a single medication by ID
 exports.getMedicationById = async (req, res) => {
     try {
-        const medication = await Medication.findById(req.params.id);
+        const medication = await Medication.findById(req.params.id).populate('user');
         if (!medication) {
             return res.status(404).json({ message: 'Medication not found' });
         }
@@ -59,8 +53,13 @@ exports.getMedicationById = async (req, res) => {
 // Update a medication by ID
 exports.updateMedicationById = async (req, res) => {
     try {
-        const { name, description, dosage, frequency, startDate, endDate } = req.body;
-        const medication = await Medication.findByIdAndUpdate(req.params.id, { name, description, dosage, frequency, startDate, endDate }, { new: true });
+        const { user, name, dosage, frequency, pillImage, schedule } = req.body;
+        const medication = await Medication.findByIdAndUpdate(
+            req.params.id, 
+            { user, name, dosage, frequency, pillImage, schedule }, 
+            { new: true }
+        ).populate('user');
+        
         if (!medication) {
             return res.status(404).json({ message: 'Medication not found' });
         }

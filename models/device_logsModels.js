@@ -15,10 +15,27 @@ const deviceLogSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    medication: {
+        type: Number,
+        ref: 'Medication'
+    },
     action: {
         type: String,
-        enum: ['Alarm Triggered', 'Button Pressed', 'Pill Taken'],
+        enum: ['Alarm Triggered', 'Button Pressed', 'Pill Taken', 'Container Opened', 'Container Closed', 'Pill Dispensed'],
         required: true
+    },
+    pillName: {
+        type: String
+    },
+    containerSlot: {
+        type: Number
+    },
+    timestamp: {
+        type: Date,
+        default: Date.now
+    },
+    metadata: {
+        type: mongoose.Schema.Types.Mixed
     }
 }, {
     timestamps: true

@@ -41,23 +41,37 @@ exports.createMedicationSchedule = async (req, res) => {
 // Get all medication schedules
 exports.getAllMedicationSchedules = async (req, res) => {
     try {
-        const schedules = await MedicationSchedule.find()
-            .populate('user')
-            .populate('medication');
-        res.status(200).json(schedules);
+        console.log('Fetching all medication schedules...');
+        
+        // Simple query without any complex operations
+        const schedules = await MedicationSchedule.find().lean();
+        
+        console.log(`Found ${schedules.length} schedules`);
+        
+        // Return the schedules directly
+        res.status(200).json({
+            success: true,
+            count: schedules.length,
+            data: schedules
+        });
+        
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error in getAllMedicationSchedules:', error);
+        res.status(500).json({ 
+            success: false,
+            message: error.message,
+            error: error.stack 
+        });
     }
 };
 
 // Get medication schedules by user ID
 exports.getMedicationSchedulesByUserId = async (req, res) => {
     try {
-        const schedules = await MedicationSchedule.find({ user: req.params.userId })
-            .populate('user')
-            .populate('medication');
+        const schedules = await MedicationSchedule.find({ user: req.params.userId });
         res.status(200).json(schedules);
     } catch (error) {
+        console.error('Error in getMedicationSchedulesByUserId:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -65,11 +79,10 @@ exports.getMedicationSchedulesByUserId = async (req, res) => {
 // Get medication schedules by medication ID
 exports.getMedicationSchedulesByMedicationId = async (req, res) => {
     try {
-        const schedules = await MedicationSchedule.find({ medication: req.params.medicationId })
-            .populate('user')
-            .populate('medication');
+        const schedules = await MedicationSchedule.find({ medication: req.params.medicationId });
         res.status(200).json(schedules);
     } catch (error) {
+        console.error('Error in getMedicationSchedulesByMedicationId:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -81,11 +94,10 @@ exports.updateMedicationSchedule = async (req, res) => {
             req.params.id,
             req.body,
             { new: true }
-        )
-        .populate('user')
-        .populate('medication');
+        );
         res.status(200).json(updatedSchedule);
     } catch (error) {
+        console.error('Error in updateMedicationSchedule:', error);
         res.status(400).json({ message: error.message });
     }
 };
@@ -96,6 +108,64 @@ exports.deleteMedicationSchedule = async (req, res) => {
         await MedicationSchedule.findByIdAndDelete(req.params.id);
         res.status(200).json({ message: 'Medication schedule deleted successfully' });
     } catch (error) {
+        console.error('Error in deleteMedicationSchedule:', error);
         res.status(500).json({ message: error.message });
+    }
+};
+
+// Test endpoint to verify database connection
+exports.testConnection = async (req, res) => {
+    try {
+        console.log('Testing medication schedule connection...');
+        
+        // Test basic database operations
+        const count = await MedicationSchedule.countDocuments();
+        
+        res.status(200).json({
+            success: true,
+            message: 'Database connection successful',
+            collectionName: 'medication_schedules',
+            documentCount: count,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Database connection test failed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Database connection failed',
+            error: error.message
+        });
+    }
+};
+
+// Debug endpoint to check model and schema
+exports.debugModel = async (req, res) => {
+    try {
+        console.log('Debugging medication schedule model...');
+        
+        // Get model info
+        const modelName = MedicationSchedule.modelName;
+        const collectionName = MedicationSchedule.collection.name;
+        
+        // Test a simple find operation
+        const sampleData = await MedicationSchedule.find().limit(1).lean();
+        
+        res.status(200).json({
+            success: true,
+            modelName: modelName,
+            collectionName: collectionName,
+            sampleData: sampleData,
+            schemaFields: Object.keys(MedicationSchedule.schema.paths),
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Model debug failed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Model debug failed',
+            error: error.message
+        });
     }
 }; 
