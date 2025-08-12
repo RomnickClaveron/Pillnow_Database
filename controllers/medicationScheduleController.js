@@ -60,18 +60,32 @@ exports.createMedicationSchedule = async (req, res) => {
 exports.getAllMedicationSchedules = async (req, res) => {
     try {
         console.log('Fetching all medication schedules...');
+        console.log('Request query:', req.query);
+        console.log('Request params:', req.params);
         
         // Simple query without any complex operations
         const schedules = await MedicationSchedule.find().lean();
         
         console.log(`Found ${schedules.length} schedules`);
+        console.log('Schedules data:', JSON.stringify(schedules, null, 2));
         
-        // Return the schedules directly
-        res.status(200).json({
-            success: true,
-            count: schedules.length,
-            data: schedules
-        });
+        // Check if client wants old format (for backward compatibility)
+        const useOldFormat = req.query.format === 'old' || req.query.legacy === 'true';
+        
+        if (useOldFormat) {
+            // Return old format (direct array)
+            console.log('Returning old format for backward compatibility');
+            res.status(200).json(schedules);
+        } else {
+            // Return new format (structured response)
+            console.log('Returning new structured format');
+            res.status(200).json({
+                success: true,
+                count: schedules.length,
+                data: schedules,
+                timestamp: new Date().toISOString()
+            });
+        }
         
     } catch (error) {
         console.error('Error in getAllMedicationSchedules:', error);
