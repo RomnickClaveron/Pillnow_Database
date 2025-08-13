@@ -3,69 +3,100 @@ const Medication = require('../models/medicationModels');
 exports.addMedication = async (req, res) => {
     try {
         const {
-            user,
             name,
+            description,
             dosage,
-            frequency,
-            pillImage,
-            schedule
+            form,
+            manufacturer
         } = req.body;
 
         const medication = new Medication({
-            user,
             name,
+            description,
             dosage,
-            frequency,
-            pillImage,
-            schedule
+            form,
+            manufacturer
         });
 
         await medication.save();
-        res.status(201).json(medication);
+        res.status(201).json({
+            success: true,
+            message: 'Medication created successfully',
+            data: medication
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ 
+            success: false,
+            message: error.message 
+        });
     }
 };
 
 // Get all medications
 exports.getAllMedications = async (req, res) => {
     try {
-        const medications = await Medication.find().populate('user');
-        res.status(200).json(medications);
+        const medications = await Medication.find().sort({ createdAt: -1 });
+        res.status(200).json({
+            success: true,
+            count: medications.length,
+            data: medications
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ 
+            success: false,
+            message: error.message 
+        });
     }
 };  
 
 // Get a single medication by ID
 exports.getMedicationById = async (req, res) => {
     try {
-        const medication = await Medication.findById(req.params.id).populate('user');
+        const medication = await Medication.findById(req.params.id);
         if (!medication) {
-            return res.status(404).json({ message: 'Medication not found' });
+            return res.status(404).json({ 
+                success: false,
+                message: 'Medication not found' 
+            });
         }
-        res.status(200).json(medication);
+        res.status(200).json({
+            success: true,
+            data: medication
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ 
+            success: false,
+            message: error.message 
+        });
     }
 };
 
 // Update a medication by ID
 exports.updateMedicationById = async (req, res) => {
     try {
-        const { user, name, dosage, frequency, pillImage, schedule } = req.body;
+        const { name, description, dosage, form, manufacturer } = req.body;
         const medication = await Medication.findByIdAndUpdate(
             req.params.id, 
-            { user, name, dosage, frequency, pillImage, schedule }, 
-            { new: true }
-        ).populate('user');
+            { name, description, dosage, form, manufacturer }, 
+            { new: true, runValidators: true }
+        );
         
         if (!medication) {
-            return res.status(404).json({ message: 'Medication not found' });
+            return res.status(404).json({ 
+                success: false,
+                message: 'Medication not found' 
+            });
         }
-        res.status(200).json(medication);
+        res.status(200).json({
+            success: true,
+            message: 'Medication updated successfully',
+            data: medication
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ 
+            success: false,
+            message: error.message 
+        });
     }
 };   
 
@@ -74,11 +105,20 @@ exports.deleteMedicationById = async (req, res) => {
     try {
         const medication = await Medication.findByIdAndDelete(req.params.id);
         if (!medication) {
-            return res.status(404).json({ message: 'Medication not found' });       
+            return res.status(404).json({ 
+                success: false,
+                message: 'Medication not found' 
+            });       
         }
-        res.status(200).json({ message: 'Medication deleted successfully' });
+        res.status(200).json({ 
+            success: true,
+            message: 'Medication deleted successfully' 
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ 
+            success: false,
+            message: error.message 
+        });
     }
 };
 
