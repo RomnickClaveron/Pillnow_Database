@@ -1,6 +1,27 @@
 const mongoose = require('mongoose');
 const Counter = require('./counterModels');
 
+const statusHistorySchema = new mongoose.Schema({
+    status: {
+        type: String,
+        enum: ['Pending', 'Taken', 'Done', 'Missed'],
+        required: true
+    },
+    timestamp: {
+        type: Date,
+        default: Date.now
+    },
+    reason: {
+        type: String,
+        enum: ['automatic', 'manual', 'system'],
+        default: 'manual'
+    },
+    notes: {
+        type: String,
+        trim: true
+    }
+}, { _id: false });
+
 const medicationScheduleSchema = new mongoose.Schema({
     scheduleId: {
         type: Number,
@@ -45,12 +66,17 @@ const medicationScheduleSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Pending', 'Taken', 'Missed'],
+        enum: ['Pending', 'Taken', 'Done', 'Missed'],
         default: 'Pending'
     },
     alertSent: {
         type: Boolean,
         default: false
+    },
+    statusHistory: [statusHistorySchema],
+    lastStatusUpdate: {
+        type: Date,
+        default: Date.now
     }
 }, {
     timestamps: true
@@ -68,5 +94,32 @@ medicationScheduleSchema.pre('save', async function(next) {
     }
     next();
 });
+
+// Method to update status and track history
+medicationScheduleSchema.methods.updateStatus = function(newStatus, reason = 'manual', notes = '') {
+    // Add current status to history before updating
+    if (this.status) {
+        this.statusHistory.push({
+            status: this.status,
+            timestamp: new Date(),
+            reason: 'system',
+            notes: 'Status changed automatically'
+        });
+    }
+    
+    // Update current status
+    this.status = newStatus;
+    this.lastStatusUpdate = new Date();
+    
+    // Add new status to history
+    this.statusHistory.push({
+        status: newStatus,
+        timestamp: new Date(),
+        reason: reason,
+        notes: notes
+    });
+    
+    return this;
+};
 
 module.exports = mongoose.model('MedicationSchedule', medicationScheduleSchema); 

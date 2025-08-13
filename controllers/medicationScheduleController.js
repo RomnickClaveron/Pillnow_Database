@@ -1,4 +1,6 @@
 const MedicationSchedule = require('../models/medication_scheduleModels');
+const statusUpdateService = require('../services/statusUpdateService');
+const notificationService = require('../services/notificationService');
 
 // Create a new medication schedule
 exports.createMedicationSchedule = async (req, res) => {
@@ -328,4 +330,328 @@ exports.getContainerStatusSummary = async (req, res) => {
             message: error.message
         });
     }
+}; 
+
+// Manual status update endpoint
+exports.updateScheduleStatus = async (req, res) => {
+    try {
+        const { scheduleId, status, notes } = req.body;
+        
+        if (!scheduleId || !status) {
+            return res.status(400).json({
+                success: false,
+                message: 'scheduleId and status are required'
+            });
+        }
+
+        const result = await statusUpdateService.updateScheduleStatus(
+            scheduleId, 
+            status, 
+            'manual', 
+            notes || ''
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Schedule status updated successfully',
+            data: result
+        });
+
+    } catch (error) {
+        console.error('Error in updateScheduleStatus:', error);
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Get status history for a schedule
+exports.getStatusHistory = async (req, res) => {
+    try {
+        const { scheduleId } = req.params;
+        
+        if (!scheduleId) {
+            return res.status(400).json({
+                success: false,
+                message: 'scheduleId is required'
+            });
+        }
+
+        const result = await statusUpdateService.getStatusHistory(scheduleId);
+
+        res.status(200).json({
+            success: true,
+            message: 'Status history retrieved successfully',
+            data: result
+        });
+
+    } catch (error) {
+        console.error('Error in getStatusHistory:', error);
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Get schedules that need notifications
+exports.getSchedulesForNotification = async (req, res) => {
+    try {
+        const schedules = await statusUpdateService.getSchedulesForNotification();
+
+        res.status(200).json({
+            success: true,
+            message: 'Schedules for notification retrieved successfully',
+            count: schedules.length,
+            data: schedules
+        });
+
+    } catch (error) {
+        console.error('Error in getSchedulesForNotification:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Mark alert as sent
+exports.markAlertSent = async (req, res) => {
+    try {
+        const { scheduleId } = req.body;
+        
+        if (!scheduleId) {
+            return res.status(400).json({
+                success: false,
+                message: 'scheduleId is required'
+            });
+        }
+
+        await statusUpdateService.markAlertSent(scheduleId);
+
+        res.status(200).json({
+            success: true,
+            message: 'Alert marked as sent successfully'
+        });
+
+    } catch (error) {
+        console.error('Error in markAlertSent:', error);
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Start automatic status updates
+exports.startAutomaticUpdates = async (req, res) => {
+    try {
+        statusUpdateService.startAutomaticUpdates();
+
+        res.status(200).json({
+            success: true,
+            message: 'Automatic status updates started successfully'
+        });
+
+    } catch (error) {
+        console.error('Error starting automatic updates:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Stop automatic status updates
+exports.stopAutomaticUpdates = async (req, res) => {
+    try {
+        statusUpdateService.stopAutomaticUpdates();
+
+        res.status(200).json({
+            success: true,
+            message: 'Automatic status updates stopped successfully'
+        });
+
+    } catch (error) {
+        console.error('Error stopping automatic updates:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Manual trigger for status updates (for testing)
+exports.triggerStatusUpdate = async (req, res) => {
+    try {
+        await statusUpdateService.updatePendingSchedules();
+
+        res.status(200).json({
+            success: true,
+            message: 'Status update triggered successfully'
+        });
+
+    } catch (error) {
+        console.error('Error triggering status update:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}; 
+
+// Start notification service
+exports.startNotificationService = async (req, res) => {
+    try {
+        notificationService.startNotificationService();
+
+        res.status(200).json({
+            success: true,
+            message: 'Notification service started successfully'
+        });
+
+    } catch (error) {
+        console.error('Error starting notification service:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Stop notification service
+exports.stopNotificationService = async (req, res) => {
+    try {
+        notificationService.stopNotificationService();
+
+        res.status(200).json({
+            success: true,
+            message: 'Notification service stopped successfully'
+        });
+
+    } catch (error) {
+        console.error('Error stopping notification service:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Send test notification
+exports.sendTestNotification = async (req, res) => {
+    try {
+        const { userId, message } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId is required'
+            });
+        }
+
+        const result = await notificationService.sendTestNotification(userId, message);
+
+        res.status(200).json({
+            success: result.success,
+            message: result.message
+        });
+
+    } catch (error) {
+        console.error('Error sending test notification:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Get user notification settings
+exports.getUserNotificationSettings = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId is required'
+            });
+        }
+
+        const settings = await notificationService.getUserNotificationSettings(userId);
+
+        res.status(200).json({
+            success: true,
+            message: 'Notification settings retrieved successfully',
+            data: settings
+        });
+
+    } catch (error) {
+        console.error('Error getting notification settings:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Update user notification settings
+exports.updateUserNotificationSettings = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const settings = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId is required'
+            });
+        }
+
+        const result = await notificationService.updateUserNotificationSettings(userId, settings);
+
+        res.status(200).json({
+            success: true,
+            message: 'Notification settings updated successfully',
+            data: result
+        });
+
+    } catch (error) {
+        console.error('Error updating notification settings:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}; 
+
+// Server-Sent Events stream for real-time status updates
+exports.streamStatusUpdates = async (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    // Optional: filter by user or container via query params
+    const { userId, containerId } = req.query;
+
+    const onUpdate = (event) => {
+        if (userId && String(event.userId) !== String(userId)) return;
+        if (containerId && String(event.containerId) !== String(containerId)) return;
+        res.write(`event: statusUpdate\n`);
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+
+    statusUpdateService.events.on('statusUpdate', onUpdate);
+
+    // Keep connection alive with periodic comments
+    const keepAlive = setInterval(() => {
+        res.write(`: keep-alive\n\n`);
+    }, 25000);
+
+    req.on('close', () => {
+        clearInterval(keepAlive);
+        statusUpdateService.events.off('statusUpdate', onUpdate);
+        res.end();
+    });
 }; 
