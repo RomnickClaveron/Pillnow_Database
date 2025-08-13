@@ -6,45 +6,32 @@ const medicationSchema = new mongoose.Schema({
         type: Number,
         unique: true
     },
-    user: {
-        type: Number,
-        ref: 'User',
-        required: true
-    },
     name: {
         type: String,
-        required: true
+        required: true,
+        trim: true
+    },
+    description: {
+        type: String,
+        trim: true
     },
     dosage: {
-        type: String
+        type: String,
+        trim: true
     },
-    frequency: {
-        type: String
+    form: {
+        type: String,
+        trim: true
     },
-    pillImage: {
-        type: String
-    },
-    schedule: [{
-        time: {
-            type: String,
-            required: true
-        },
-        days: {
-            type: [String],
-            enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-            required: true
-        },
-        status: {
-            type: String,
-            enum: ['Pending', 'Taken', 'Missed'],
-            default: 'Pending'
-        }
-    }]
+    manufacturer: {
+        type: String,
+        trim: true
+    }
 }, {
     timestamps: true
 });
 
-// Pre-save middleware to generate sequential ID
+// Pre-save middleware to generate sequential numeric medId
 medicationSchema.pre('save', async function(next) {
     if (!this.medId) {
         const counter = await Counter.findByIdAndUpdate(
