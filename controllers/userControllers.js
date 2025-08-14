@@ -124,6 +124,40 @@ exports.getUserById = async (req, res) => {
     }
 };
 
+// Get user by phone number
+exports.getUserByPhone = async (req, res) => {
+    try {
+        const { phone } = req.params;
+        
+        // Check if user exists by phone number
+        const user = await User.findOne({ phone }).select('-password -_id');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found with this phone number' });
+        }
+
+        // Role-based access control
+        const requestingUser = req.user;
+        
+        // Allow access if:
+        // 1. User is admin (can access anyone)
+        // 2. User is accessing their own account
+        // 3. User is caregiver (role 3) and target is elder (role 2)
+        if (requestingUser && (
+            requestingUser.role === ROLE_ADMIN || 
+            requestingUser.userId === user.userId ||
+            (requestingUser.role === ROLE_GUARDIAN && user.role === ROLE_ELDER)
+        )) {
+            res.json(user);
+        } else {
+            res.status(403).json({ 
+                message: 'Access denied. Caregivers can only access elder accounts, and users can only access their own account.' 
+            });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // Update user (admin or self)
 exports.updateUser = async (req, res) => {
     try {
