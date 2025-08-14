@@ -13,6 +13,7 @@ router.get('/profile', protect, userController.getCurrentUser);
 router.get('/', protect, caregiverViewElders, userController.getAllUsers);
 router.get('/phone/:phone', protect, userController.getUserByPhone);
 router.get('/phone-simple/:phone', protect, userController.getUserByPhoneSimple);
+router.get('/debug/all-users', protect, userController.debugAllUsers);
 router.get('/:id', protect, caregiverOrSelf, userController.getUserById);
 router.put('/:id', protect, caregiverOrSelf, userController.updateUser);
 router.delete('/:id', protect, adminOrSelf, userController.deleteUser);
