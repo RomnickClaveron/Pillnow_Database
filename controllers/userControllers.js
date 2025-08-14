@@ -86,10 +86,25 @@ exports.loginUser = async (req, res) => {
     }
 };
 
-// Get all users (admin only)
+// Get all users (role-based access)
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find().select('-password -_id');
+        const requestingUser = req.user;
+        let users;
+
+        if (requestingUser.role === ROLE_ADMIN) {
+            // Admin can see all users
+            users = await User.find().select('-password -_id');
+        } else if (requestingUser.role === ROLE_GUARDIAN) {
+            // Caregivers can only see elders
+            users = await User.find({ role: ROLE_ELDER }).select('-password -_id');
+        } else if (requestingUser.role === ROLE_ELDER) {
+            // Elders can only see themselves
+            users = await User.find({ userId: requestingUser.userId }).select('-password -_id');
+        } else {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: error.message });
