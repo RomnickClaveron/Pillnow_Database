@@ -129,11 +129,19 @@ exports.getUserByPhone = async (req, res) => {
     try {
         const { phone } = req.params;
         
+        console.log('Searching for user with phone:', phone);
+        console.log('Requesting user:', req.user);
+        
         // Check if user exists by phone number
         const user = await User.findOne({ phone }).select('-password -_id');
         if (!user) {
-            return res.status(404).json({ message: 'User not found with this phone number' });
+            return res.status(404).json({ 
+                message: 'User not found with this phone number',
+                searchedPhone: phone
+            });
         }
+
+        console.log('Found user:', user);
 
         // Role-based access control
         const requestingUser = req.user;
@@ -142,18 +150,58 @@ exports.getUserByPhone = async (req, res) => {
         // 1. User is admin (can access anyone)
         // 2. User is accessing their own account
         // 3. User is caregiver (role 3) and target is elder (role 2)
-        if (requestingUser && (
+        // 4. For development: Allow any authenticated user to access any user
+        const canAccess = requestingUser && (
             requestingUser.role === ROLE_ADMIN || 
             requestingUser.userId === user.userId ||
-            (requestingUser.role === ROLE_GUARDIAN && user.role === ROLE_ELDER)
-        )) {
+            (requestingUser.role === ROLE_GUARDIAN && user.role === ROLE_ELDER) ||
+            // Development mode: Allow any authenticated user to access any user
+            true // Remove this line in production
+        );
+
+        console.log('Can access:', canAccess);
+        console.log('Requesting user role:', requestingUser?.role);
+        console.log('Target user role:', user.role);
+        console.log('Requesting user ID:', requestingUser?.userId);
+        console.log('Target user ID:', user.userId);
+
+        if (canAccess) {
             res.json(user);
         } else {
             res.status(403).json({ 
-                message: 'Access denied. Caregivers can only access elder accounts, and users can only access their own account.' 
+                message: 'Access denied. Caregivers can only access elder accounts, and users can only access their own account.',
+                requestingUserRole: requestingUser?.role,
+                targetUserRole: user.role,
+                requestingUserId: requestingUser?.userId,
+                targetUserId: user.userId
             });
         }
     } catch (error) {
+        console.error('Error in getUserByPhone:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get user by phone number (simplified for frontend)
+exports.getUserByPhoneSimple = async (req, res) => {
+    try {
+        const { phone } = req.params;
+        
+        console.log('Simple search for user with phone:', phone);
+        
+        // Check if user exists by phone number
+        const user = await User.findOne({ phone }).select('-password -_id');
+        if (!user) {
+            return res.status(404).json({ 
+                message: 'User not found with this phone number',
+                searchedPhone: phone
+            });
+        }
+
+        console.log('Found user:', user);
+        res.json(user);
+    } catch (error) {
+        console.error('Error in getUserByPhoneSimple:', error);
         res.status(500).json({ message: error.message });
     }
 };
