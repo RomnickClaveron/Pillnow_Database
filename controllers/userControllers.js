@@ -17,12 +17,12 @@ const generateToken = (userId) => {
 // Register a new user
 exports.registerUser = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, phone, role } = req.body;
         
-        // Check if user exists
+        // Check if user exists by email
         const userExists = await User.findOne({ email });
         if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(400).json({ message: 'User already exists with this email' });
         }
 
         // Validate role (must be 1, 2, or 3)
@@ -40,6 +40,7 @@ exports.registerUser = async (req, res) => {
             name,
             email,
             password: hashedPassword,
+            phone,
             role
         });
 
@@ -47,6 +48,7 @@ exports.registerUser = async (req, res) => {
             userId: user.userId,
             name: user.name,
             email: user.email,
+            phone: user.phone,
             role: user.role
         });
     } catch (error) {
@@ -75,6 +77,7 @@ exports.loginUser = async (req, res) => {
             userId: user.userId,
             name: user.name,
             email: user.email,
+            phone: user.phone,
             role: user.role,
             token: generateToken(user.userId)
         });

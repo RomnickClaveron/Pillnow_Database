@@ -23,7 +23,8 @@ const userSchema = new mongoose.Schema({
         type: Number
     },
     phone: {
-        type: String
+        type: String,
+        required: true
     },
     // role: 1=admin, 2=elder, 3=guardian
     role: {
