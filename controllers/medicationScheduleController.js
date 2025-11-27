@@ -5,21 +5,12 @@ const notificationService = require('../services/notificationService');
 // Create a new medication schedule
 exports.createMedicationSchedule = async (req, res) => {
     try {
-        console.log('Request body:', req.body);
-        console.log('Request headers:', req.headers);
-        console.log('Content-Type:', req.headers['content-type']);
-        
         // Validate required fields
         if (!req.body.user || !req.body.medication || !req.body.date || !req.body.time) {
             return res.status(400).json({ 
                 success: false,
                 message: 'Missing required fields: user, medication, date, and time are required' 
             });
-        }
-        
-        // Validate container field
-        if (!req.body.container) {
-            console.log('No container specified, using default');
         }
         
         // Validate date format
@@ -31,9 +22,13 @@ exports.createMedicationSchedule = async (req, res) => {
             });
         }
         
+        // Ensure createdBy is set to authenticated user
+        const createdBy = Number(req.user.userId);
+        
         const schedule = new MedicationSchedule({
-            user: req.body.user,
-            medication: req.body.medication,
+            user: Number(req.body.user),
+            createdBy: createdBy,
+            medication: Number(req.body.medication),
             container: req.body.container || 'default',
             date: dateValue,
             time: req.body.time,
@@ -50,7 +45,7 @@ exports.createMedicationSchedule = async (req, res) => {
         });
         
     } catch (error) {
-        console.log('Error:', error.message);
+        console.error('Error creating schedule:', error);
         res.status(400).json({ 
             success: false,
             message: error.message 
@@ -65,8 +60,19 @@ exports.getAllMedicationSchedules = async (req, res) => {
         console.log('Request query:', req.query);
         console.log('Request params:', req.params);
         
-        // Simple query without any complex operations
-        const schedules = await MedicationSchedule.find().lean();
+        // Role-aware query: admins see all, elders see their own, caregivers see what they created
+        const requester = req.user;
+        let query = {};
+        if (requester) {
+            if (requester.role === 1) {
+                query = {};
+            } else if (requester.role === 2) { // elder
+                query = { user: requester.userId };
+            } else if (requester.role === 3) { // guardian/caregiver
+                query = { createdBy: requester.userId };
+            }
+        }
+        const schedules = await MedicationSchedule.find(query).lean();
         
         console.log(`Found ${schedules.length} schedules`);
         console.log('Schedules data:', JSON.stringify(schedules, null, 2));
@@ -116,7 +122,16 @@ exports.getAllMedicationSchedules = async (req, res) => {
 // Get medication schedules by user ID
 exports.getMedicationSchedulesByUserId = async (req, res) => {
     try {
-        const schedules = await MedicationSchedule.find({ user: req.params.userId });
+        const requester = req.user;
+        const targetUserId = Number(req.params.userId);
+        // elders can only fetch their own; caregivers only those they created for that elder; admin any
+        let query = { user: targetUserId };
+        if (requester && requester.role === 3) {
+            query.createdBy = requester.userId;
+        } else if (requester && requester.role === 2 && requester.userId !== String(targetUserId)) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+        const schedules = await MedicationSchedule.find(query);
         res.status(200).json(schedules);
     } catch (error) {
         console.error('Error in getMedicationSchedulesByUserId:', error);
@@ -127,7 +142,15 @@ exports.getMedicationSchedulesByUserId = async (req, res) => {
 // Get medication schedules by medication ID
 exports.getMedicationSchedulesByMedicationId = async (req, res) => {
     try {
-        const schedules = await MedicationSchedule.find({ medication: req.params.medicationId });
+        const requester = req.user;
+        const medicationId = Number(req.params.medicationId);
+        let query = { medication: medicationId };
+        if (requester && requester.role === 2) {
+            query.user = requester.userId;
+        } else if (requester && requester.role === 3) {
+            query.createdBy = requester.userId;
+        }
+        const schedules = await MedicationSchedule.find(query);
         res.status(200).json(schedules);
     } catch (error) {
         console.error('Error in getMedicationSchedulesByMedicationId:', error);
@@ -138,7 +161,14 @@ exports.getMedicationSchedulesByMedicationId = async (req, res) => {
 // Get medication schedules by container ID
 exports.getMedicationSchedulesByContainerId = async (req, res) => {
     try {
-        const schedules = await MedicationSchedule.find({ container: req.params.containerId }).lean();
+        const requester = req.user;
+        const baseQuery = { container: req.params.containerId };
+        if (requester && requester.role === 2) {
+            baseQuery.user = requester.userId;
+        } else if (requester && requester.role === 3) {
+            baseQuery.createdBy = requester.userId;
+        }
+        const schedules = await MedicationSchedule.find(baseQuery).lean();
         
         // Transform data for frontend compatibility
         const transformedSchedules = schedules.map(schedule => ({
@@ -169,10 +199,14 @@ exports.getMedicationSchedulesByContainerId = async (req, res) => {
 exports.getMedicationSchedulesByUserAndContainer = async (req, res) => {
     try {
         const { userId, containerId } = req.params;
-        const schedules = await MedicationSchedule.find({ 
-            user: userId, 
-            container: containerId 
-        });
+        const requester = req.user;
+        const query = { user: Number(userId), container: containerId };
+        if (requester && requester.role === 3) {
+            query.createdBy = requester.userId;
+        } else if (requester && requester.role === 2 && requester.userId !== String(userId)) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+        const schedules = await MedicationSchedule.find(query);
         res.status(200).json({
             success: true,
             count: schedules.length,
@@ -189,32 +223,73 @@ exports.getMedicationSchedulesByUserAndContainer = async (req, res) => {
 
 exports.updateMedicationSchedule = async (req, res) => {
     try {
+        // Schedule ownership already validated by middleware (req.schedule is set)
+        const schedule = req.schedule;
+        
+        // Validate user ID in body if provided (must match schedule owner or be admin)
+        if (req.body.user !== undefined) {
+            const bodyUserId = String(req.body.user);
+            const scheduleUserId = String(schedule.user);
+            const isAdmin = req.user.role === 1;
+            
+            if (bodyUserId !== scheduleUserId && !isAdmin) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Forbidden: Cannot change schedule owner. User ID in body does not match schedule owner',
+                    scheduleUserId: scheduleUserId,
+                    requestedUserId: bodyUserId
+                });
+            }
+        }
+
         const updateData = {
             ...req.body,
             // Ensure container field is included in updates
             container: req.body.container || 'default'
         };
         
+        // Use the schedule ID from middleware
+        const scheduleId = schedule._id || schedule.scheduleId;
         const updatedSchedule = await MedicationSchedule.findByIdAndUpdate(
-            req.params.id,
+            scheduleId,
             updateData,
-            { new: true }
+            { new: true, runValidators: true }
         );
-        res.status(200).json(updatedSchedule);
+        
+        res.status(200).json({
+            success: true,
+            message: 'Schedule updated successfully',
+            data: updatedSchedule
+        });
     } catch (error) {
         console.error('Error in updateMedicationSchedule:', error);
-        res.status(400).json({ message: error.message });
+        res.status(400).json({ 
+            success: false,
+            message: error.message 
+        });
     }
 };
 
 // Delete a medication schedule
 exports.deleteMedicationSchedule = async (req, res) => {
     try {
-        await MedicationSchedule.findByIdAndDelete(req.params.id);
-        res.status(200).json({ message: 'Medication schedule deleted successfully' });
+        // Schedule ownership already validated by middleware (req.schedule is set)
+        const schedule = req.schedule;
+        
+        // Use the schedule ID from middleware
+        const scheduleId = schedule._id || schedule.scheduleId;
+        await MedicationSchedule.findByIdAndDelete(scheduleId);
+        
+        res.status(200).json({ 
+            success: true,
+            message: 'Medication schedule deleted successfully' 
+        });
     } catch (error) {
         console.error('Error in deleteMedicationSchedule:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ 
+            success: false,
+            message: error.message 
+        });
     }
 };
 
@@ -280,8 +355,17 @@ exports.getContainerStatusSummary = async (req, res) => {
     try {
         const { containerId } = req.params;
         
+        // Build access-aware query
+        const requester = req.user;
+        const baseQuery = { container: containerId };
+        if (requester && requester.role === 2) {
+            baseQuery.user = requester.userId;
+        } else if (requester && requester.role === 3) {
+            baseQuery.createdBy = requester.userId;
+        }
+
         // Get all schedules for this container
-        const schedules = await MedicationSchedule.find({ container: containerId }).lean();
+        const schedules = await MedicationSchedule.find(baseQuery).lean();
         
         // Group by status
         const statusSummary = {
@@ -344,10 +428,13 @@ exports.updateScheduleStatus = async (req, res) => {
             });
         }
 
+        // Schedule ownership already validated by middleware (req.schedule is set)
+        const schedule = req.schedule;
+
         const result = await statusUpdateService.updateScheduleStatus(
-            scheduleId, 
-            status, 
-            'manual', 
+            schedule.scheduleId || scheduleId,
+            status,
+            'manual',
             notes || ''
         );
 
@@ -378,7 +465,10 @@ exports.getStatusHistory = async (req, res) => {
             });
         }
 
-        const result = await statusUpdateService.getStatusHistory(scheduleId);
+        // Schedule ownership already validated by middleware (req.schedule is set)
+        const schedule = req.schedule;
+
+        const result = await statusUpdateService.getStatusHistory(schedule.scheduleId || scheduleId);
 
         res.status(200).json({
             success: true,
@@ -398,13 +488,21 @@ exports.getStatusHistory = async (req, res) => {
 // Get schedules that need notifications
 exports.getSchedulesForNotification = async (req, res) => {
     try {
+        const requester = req.user;
         const schedules = await statusUpdateService.getSchedulesForNotification();
+        // Filter by access: admin all; elder own; caregiver created
+        let filtered = schedules;
+        if (requester && requester.role === 2) {
+            filtered = schedules.filter(s => String(s.user) === String(requester.userId));
+        } else if (requester && requester.role === 3) {
+            filtered = schedules.filter(s => String(s.createdBy) === String(requester.userId));
+        }
 
         res.status(200).json({
             success: true,
             message: 'Schedules for notification retrieved successfully',
-            count: schedules.length,
-            data: schedules
+            count: filtered.length,
+            data: filtered
         });
 
     } catch (error) {

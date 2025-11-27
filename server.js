@@ -17,6 +17,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve uploaded images statically
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // MongoDB Connection
 const MONGO_URI = process.env.DB_URI;
 
@@ -34,7 +38,9 @@ const connectDB = async () => {
 			'pill_identifications',
 			'alerts',
 			'users',
-			'medications'
+			'medications',
+			'devices',
+			'caregiverconnections'
 		];
 
 		for (const collection of collections) {
@@ -85,6 +91,9 @@ const pillIdentificationRoutes = require('./routes/pillIdentificationRoutes');
 const alertsRoutes = require('./routes/alertsRoutes');
 const userRoutes = require('./routes/userRoutes');
 const medicationRoutes = require('./routes/medicationRoutes');
+const deviceRoutes = require('./routes/deviceRoutes');
+const monitorRoutes = require('./routes/monitorRoutes');
+const caregiverRoutes = require('./routes/caregiverRoutes');
 
 app.use('/api/device_logs', deviceLogsRoutes);
 app.use('/api/medication_schedules', medicationScheduleRoutes);
@@ -92,6 +101,9 @@ app.use('/api/pill_identification', pillIdentificationRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/medications', medicationRoutes);
+app.use('/api/devices', deviceRoutes);
+app.use('/api/monitor', monitorRoutes);
+app.use('/api/caregivers', caregiverRoutes);
 
 // Error handler
 app.use((err, req, res, next) => {

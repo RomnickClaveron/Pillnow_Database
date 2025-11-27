@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PillNow - Image Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .preview {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .preview img {
+            max-width: 100%;
+            max-height: 300px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .result pre {
+            margin: 10px 0 0 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 PillNow Image Upload</h1>
+        
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="userId">User ID *</label>
+                <input type="number" id="userId" name="userId" value="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="image">Select Image *</label>
+                <input type="file" id="image" name="image" accept="image/*" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="deviceId">Device ID</label>
+                <input type="text" id="deviceId" name="deviceId" value="web_upload_001" placeholder="Optional">
+            </div>
+            
+            <div class="form-group">
+                <label for="containerId">Container ID</label>
+                <input type="text" id="containerId" name="containerId" value="container_A" placeholder="Optional">
+            </div>
+            
+            <div class="form-group">
+                <label for="scheduleId">Schedule ID</label>
+                <input type="number" id="scheduleId" name="scheduleId" placeholder="Optional">
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="Optional notes"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="apiUrl">API URL</label>
+                <input type="text" id="apiUrl" name="apiUrl" value="http://localhost:3000/api/pill_identification/upload-file" required>
+            </div>
+            
+            <button type="submit" id="submitBtn">Upload Image</button>
+        </form>
+        
+        <div class="preview" id="preview"></div>
+        
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const imageInput = document.getElementById('image');
+        const preview = document.getElementById('preview');
+        const result = document.getElementById('result');
+        const submitBtn = document.getElementById('submitBtn');
+        const apiUrlInput = document.getElementById('apiUrl');
+
+        // Preview image before upload
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = '<h3>Preview:</h3><img src="' + e.target.result + '" alt="Preview">';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle form submission
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Disable button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Uploading...';
+            result.style.display = 'none';
+            
+            try {
+                // Get form data
+                const formData = new FormData();
+                formData.append('user', document.getElementById('userId').value);
+                formData.append('image', imageInput.files[0]);
+                
+                const deviceId = document.getElementById('deviceId').value;
+                const containerId = document.getElementById('containerId').value;
+                const scheduleId = document.getElementById('scheduleId').value;
+                const notes = document.getElementById('notes').value;
+                const apiUrl = apiUrlInput.value;
+                
+                if (deviceId) formData.append('deviceId', deviceId);
+                if (containerId) formData.append('containerId', containerId);
+                if (scheduleId) formData.append('scheduleId', scheduleId);
+                if (notes) formData.append('notes', notes);
+                
+                // Upload
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                // Show result
+                if (response.ok && data.success) {
+                    result.className = 'result success';
+                    result.innerHTML = `
+                        <h3>✅ Upload Successful!</h3>
+                        <p><strong>Image ID:</strong> ${data.data.imageId}</p>
+                        <p><strong>Status:</strong> ${data.data.status}</p>
+                        <p><strong>Image URL:</strong> <a href="${data.data.imageUrl}" target="_blank">${data.data.imageUrl}</a></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    result.className = 'result error';
+                    result.innerHTML = `
+                        <h3>❌ Upload Failed</h3>
+                        <p><strong>Error:</strong> ${data.message || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+                result.style.display = 'block';
+                
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `
+                    <h3>❌ Error</h3>
+                    <p>${error.message}</p>
+                `;
+                result.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Upload Image';
+            }
+        });
+    </script>
+</body>
+</html>
+
+

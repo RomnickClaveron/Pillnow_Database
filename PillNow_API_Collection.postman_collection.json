@@ -1,0 +1,413 @@
+{
+	"info": {
+		"_postman_id": "pillnow-api-collection",
+		"name": "PillNow API Collection",
+		"description": "Complete API collection for PillNow medication management system",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Pill Identification",
+			"item": [
+				{
+					"name": "Upload Image File (Multipart)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has success field\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});",
+									"",
+									"pm.test(\"Response contains imageId\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('imageId');",
+									"});",
+									"",
+									"// Save imageId for next request",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"imageId\", jsonData.data.imageId);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "user",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "deviceId",
+									"value": "postman_test_001",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "containerId",
+									"value": "container_A",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "scheduleId",
+									"value": "1",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "notes",
+									"value": "Test upload from Postman",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/pill_identification/upload-file",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"pill_identification",
+								"upload-file"
+							]
+						},
+						"description": "Upload image file directly using multipart/form-data. Select an image file in the 'image' field."
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Image (URL or Base64)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has success field\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});",
+									"",
+									"pm.test(\"Response contains imageId\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('imageId');",
+									"});",
+									"",
+									"// Save imageId for next request",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"imageId\", jsonData.data.imageId);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user\": 1,\n    \"imageUrl\": \"https://example.com/images/pill_001.jpg\",\n    \"scheduleId\": 1,\n    \"deviceId\": \"device_001\",\n    \"containerId\": \"container_A\",\n    \"notes\": \"Test upload from IoT device\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/pill_identification/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"pill_identification",
+								"upload"
+							]
+						},
+						"description": "Upload image using URL or base64 string. For base64, replace imageUrl with imageBase64 field."
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Image - Minimal (Required Fields Only)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user\": 1,\n    \"imageUrl\": \"https://example.com/images/pill_002.jpg\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/pill_identification/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"pill_identification",
+								"upload"
+							]
+						},
+						"description": "Minimal upload with only required fields (user and imageUrl)"
+					},
+					"response": []
+				},
+				{
+					"name": "Process and Verify Image",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has report\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('report');",
+									"});",
+									"",
+									"pm.test(\"Report contains verification info\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.report).to.have.property('verification');",
+									"    pm.expect(jsonData.report).to.have.property('summary');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"imageId\": {{imageId}},\n    \"classification\": \"Aspirin\",\n    \"confidence\": 0.95,\n    \"medicationId\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/pill_identification/process",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"pill_identification",
+								"process"
+							]
+						},
+						"description": "System processes the uploaded image, identifies the pill, verifies against schedule, and generates a report."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pending Identifications",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pill_identification/pending",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"pill_identification",
+								"pending"
+							]
+						},
+						"description": "Get all images that are pending identification"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Image by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pill_identification/image/{{imageId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"pill_identification",
+								"image",
+								"{{imageId}}"
+							]
+						},
+						"description": "Get a specific pill identification record by imageId"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Pill Identifications",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pill_identification",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"pill_identification"
+							]
+						},
+						"description": "Get all pill identifications"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for pill identification workflow"
+		},
+		{
+			"name": "Medication Schedules",
+			"item": [
+				{
+					"name": "Create Medication Schedule",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user\": 1,\n    \"medication\": 1,\n    \"date\": \"2024-01-15\",\n    \"time\": \"08:00\",\n    \"container\": \"container_A\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/medication_schedules",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"medication_schedules"
+							]
+						},
+						"description": "Create a new medication schedule"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Schedules",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/medication_schedules",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"medication_schedules"
+							]
+						},
+						"description": "Get all medication schedules"
+					},
+					"response": []
+				}
+			],
+			"description": "Medication scheduling endpoints"
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "imageId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
+
