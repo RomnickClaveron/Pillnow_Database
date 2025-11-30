@@ -117,8 +117,14 @@ const medicationScheduleSchema = new mongoose.Schema({
         },
         missedReason: {
             type: String,
-            enum: ['forgot', 'device_offline', 'medication_unavailable', 'user_refused', 'other'],
-            default: null
+            default: null,
+            required: false,
+            validate: {
+                validator: function(v) {
+                    return v === null || v === undefined || ['forgot', 'device_offline', 'medication_unavailable', 'user_refused', 'other'].includes(v);
+                },
+                message: 'missedReason must be null or one of: forgot, device_offline, medication_unavailable, user_refused, other'
+            }
         },
         caregiverNotified: {
             type: Boolean,

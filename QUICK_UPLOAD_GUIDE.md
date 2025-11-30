@@ -149,3 +149,4 @@ The filename is in the response `imageUrl` field.
 **Need more details?** See `ESP32_CAM_GUIDE.md` for ESP32-CAM setup.
 
 
+

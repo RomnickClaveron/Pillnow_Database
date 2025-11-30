@@ -343,3 +343,4 @@ async function uploadBase64(imageFile) {
 - Review server logs for detailed error messages
 
 
+
