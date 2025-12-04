@@ -117,7 +117,7 @@ const medicationScheduleSchema = new mongoose.Schema({
         },
         missedReason: {
             type: String,
-            enum: ['forgot', 'device_offline', 'medication_unavailable', 'user_refused', 'other'],
+            enum: ['forgot', 'device_offline', 'medication_unavailable', 'user_refused', 'other', null],
             default: null
         },
         caregiverNotified: {
