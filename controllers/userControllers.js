@@ -56,13 +56,28 @@ exports.registerUser = async (req, res) => {
     }
 };
 
-// Login user
+// Login user (supports both email and phone)
 exports.loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, phone, password } = req.body;
 
-        // Check for user email
-        const user = await User.findOne({ email });
+        // Validate that either email or phone is provided
+        if (!email && !phone) {
+            return res.status(400).json({ message: 'Please provide either email or phone number' });
+        }
+
+        if (!password) {
+            return res.status(400).json({ message: 'Password is required' });
+        }
+
+        // Find user by email or phone
+        let user;
+        if (email) {
+            user = await User.findOne({ email });
+        } else {
+            user = await User.findOne({ phone });
+        }
+
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
@@ -373,5 +388,144 @@ exports.getCurrentUser = async (req, res) => {
         res.json(user);
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+// Change password (requires authentication and old password)
+exports.changePassword = async (req, res) => {
+    try {
+        const { oldPassword, newPassword } = req.body;
+        const userId = req.user.userId;
+
+        // Validate input
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({ message: 'Both old password and new password are required' });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+        }
+
+        // Find user
+        const user = await User.findOne({ userId });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Verify old password
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Current password is incorrect' });
+        }
+
+        // Check if new password is same as old password
+        const isSamePassword = await bcrypt.compare(newPassword, user.password);
+        if (isSamePassword) {
+            return res.status(400).json({ message: 'New password must be different from current password' });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update password
+        user.password = hashedPassword;
+        await user.save();
+
+        res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
+// Forgot password - generate reset token
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email, phone } = req.body;
+
+        // Validate that either email or phone is provided
+        if (!email && !phone) {
+            return res.status(400).json({ message: 'Please provide either email or phone number' });
+        }
+
+        // Find user by email or phone
+        let user;
+        if (email) {
+            user = await User.findOne({ email });
+        } else {
+            user = await User.findOne({ phone });
+        }
+
+        if (!user) {
+            // Don't reveal if user exists for security
+            return res.json({ 
+                message: 'If an account exists with that email/phone, a password reset token has been generated.',
+                // In production, always return this message regardless of user existence
+            });
+        }
+
+        // Generate reset token (using crypto for secure random token)
+        const crypto = require('crypto');
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        
+        // Set token expiry (1 hour from now)
+        const resetTokenExpiry = new Date();
+        resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1);
+
+        // Save reset token to user
+        user.resetToken = resetToken;
+        user.resetTokenExpiry = resetTokenExpiry;
+        await user.save();
+
+        // In production, send this token via email/SMS
+        // For now, return it (remove this in production and send via email/SMS only)
+        res.json({
+            message: 'Password reset token generated successfully',
+            resetToken: resetToken, // TODO: Remove this in production - send via email/SMS only
+            expiresIn: '1 hour',
+            note: 'In production, this token should be sent via email/SMS, not returned in the response'
+        });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
+// Reset password using reset token
+exports.resetPassword = async (req, res) => {
+    try {
+        const { resetToken, newPassword } = req.body;
+
+        // Validate input
+        if (!resetToken || !newPassword) {
+            return res.status(400).json({ message: 'Reset token and new password are required' });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+        }
+
+        // Find user with valid reset token
+        const user = await User.findOne({
+            resetToken: resetToken,
+            resetTokenExpiry: { $gt: new Date() } // Token not expired
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid or expired reset token' });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update password and clear reset token
+        user.password = hashedPassword;
+        user.resetToken = null;
+        user.resetTokenExpiry = null;
+        await user.save();
+
+        res.json({ message: 'Password reset successfully. You can now login with your new password.' });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
     }
 };

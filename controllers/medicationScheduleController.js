@@ -1,16 +1,26 @@
 const MedicationSchedule = require('../models/medication_scheduleModels');
+const CaregiverConnection = require('../models/caregiverConnectionModels');
 const statusUpdateService = require('../services/statusUpdateService');
 const notificationService = require('../services/notificationService');
 
 // Create a new medication schedule
 exports.createMedicationSchedule = async (req, res) => {
     try {
+        console.log('Request body:', req.body);
+        console.log('Request headers:', req.headers);
+        console.log('Content-Type:', req.headers['content-type']);
+        
         // Validate required fields
         if (!req.body.user || !req.body.medication || !req.body.date || !req.body.time) {
             return res.status(400).json({ 
                 success: false,
                 message: 'Missing required fields: user, medication, date, and time are required' 
             });
+        }
+        
+        // Validate container field
+        if (!req.body.container) {
+            console.log('No container specified, using default');
         }
         
         // Validate date format
@@ -22,13 +32,10 @@ exports.createMedicationSchedule = async (req, res) => {
             });
         }
         
-        // Ensure createdBy is set to authenticated user
-        const createdBy = Number(req.user.userId);
-        
         const schedule = new MedicationSchedule({
-            user: Number(req.body.user),
-            createdBy: createdBy,
-            medication: Number(req.body.medication),
+            user: req.body.user,
+            createdBy: Number(req.user?.userId) || Number(req.body.createdBy),
+            medication: req.body.medication,
             container: req.body.container || 'default',
             date: dateValue,
             time: req.body.time,
@@ -45,7 +52,7 @@ exports.createMedicationSchedule = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Error creating schedule:', error);
+        console.log('Error:', error.message);
         res.status(400).json({ 
             success: false,
             message: error.message 
@@ -60,18 +67,61 @@ exports.getAllMedicationSchedules = async (req, res) => {
         console.log('Request query:', req.query);
         console.log('Request params:', req.params);
         
-        // Role-aware query: admins see all, elders see their own, caregivers see what they created
         const requester = req.user;
-        let query = {};
-        if (requester) {
-            if (requester.role === 1) {
-                query = {};
-            } else if (requester.role === 2) { // elder
-                query = { user: requester.userId };
-            } else if (requester.role === 3) { // guardian/caregiver
-                query = { createdBy: requester.userId };
-            }
+
+        if (!requester) {
+            return res.status(401).json({ 
+                success: false,
+                message: 'Not authorized' 
+            });
         }
+
+        const authUserId = Number(requester.userId);
+        const role = requester.role;
+        const elderIdParam = req.query.elderId ? Number(req.query.elderId) : null;
+
+        let query = {};
+
+        if (role === 1) {
+            // Admin: can see all, or filter by elderId if provided
+            if (elderIdParam) {
+                query = { user: elderIdParam };
+            } else {
+                query = {};
+            }
+        } else if (role === 2) {
+            // Elder: can only see their own schedules
+            query = { user: authUserId };
+        } else if (role === 3) {
+            // Caregiver: must specify elderId and have an active connection
+            if (!elderIdParam) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'elderId query parameter is required for caregivers'
+                });
+            }
+
+            const connection = await CaregiverConnection.findOne({
+                caregiver: authUserId,
+                elder: elderIdParam,
+                status: 'active'
+            });
+
+            if (!connection) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied: no active caregiver-elder connection for this elder'
+                });
+            }
+
+            query = { user: elderIdParam };
+        } else {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied: unknown role'
+            });
+        }
+
         const schedules = await MedicationSchedule.find(query).lean();
         
         console.log(`Found ${schedules.length} schedules`);
@@ -223,23 +273,17 @@ exports.getMedicationSchedulesByUserAndContainer = async (req, res) => {
 
 exports.updateMedicationSchedule = async (req, res) => {
     try {
-        // Schedule ownership already validated by middleware (req.schedule is set)
-        const schedule = req.schedule;
-        
-        // Validate user ID in body if provided (must match schedule owner or be admin)
-        if (req.body.user !== undefined) {
-            const bodyUserId = String(req.body.user);
-            const scheduleUserId = String(schedule.user);
-            const isAdmin = req.user.role === 1;
-            
-            if (bodyUserId !== scheduleUserId && !isAdmin) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Forbidden: Cannot change schedule owner. User ID in body does not match schedule owner',
-                    scheduleUserId: scheduleUserId,
-                    requestedUserId: bodyUserId
-                });
-            }
+        const schedule = await MedicationSchedule.findById(req.params.id);
+        if (!schedule) {
+            return res.status(404).json({ message: 'Schedule not found' });
+        }
+
+        const requester = req.user;
+        const isAdmin = requester && requester.role === 1;
+        const isOwnerElder = requester && requester.role === 2 && String(schedule.user) === String(requester.userId);
+        const isCreatorCaregiver = requester && requester.role === 3 && String(schedule.createdBy) === String(requester.userId);
+        if (!(isAdmin || isOwnerElder || isCreatorCaregiver)) {
+            return res.status(403).json({ message: 'Access denied' });
         }
 
         const updateData = {
@@ -248,48 +292,39 @@ exports.updateMedicationSchedule = async (req, res) => {
             container: req.body.container || 'default'
         };
         
-        // Use the schedule ID from middleware
-        const scheduleId = schedule._id || schedule.scheduleId;
         const updatedSchedule = await MedicationSchedule.findByIdAndUpdate(
-            scheduleId,
+            req.params.id,
             updateData,
-            { new: true, runValidators: true }
+            { new: true }
         );
-        
-        res.status(200).json({
-            success: true,
-            message: 'Schedule updated successfully',
-            data: updatedSchedule
-        });
+        res.status(200).json(updatedSchedule);
     } catch (error) {
         console.error('Error in updateMedicationSchedule:', error);
-        res.status(400).json({ 
-            success: false,
-            message: error.message 
-        });
+        res.status(400).json({ message: error.message });
     }
 };
 
 // Delete a medication schedule
 exports.deleteMedicationSchedule = async (req, res) => {
     try {
-        // Schedule ownership already validated by middleware (req.schedule is set)
-        const schedule = req.schedule;
-        
-        // Use the schedule ID from middleware
-        const scheduleId = schedule._id || schedule.scheduleId;
-        await MedicationSchedule.findByIdAndDelete(scheduleId);
-        
-        res.status(200).json({ 
-            success: true,
-            message: 'Medication schedule deleted successfully' 
-        });
+        const schedule = await MedicationSchedule.findById(req.params.id);
+        if (!schedule) {
+            return res.status(404).json({ message: 'Schedule not found' });
+        }
+
+        const requester = req.user;
+        const isAdmin = requester && requester.role === 1;
+        const isOwnerElder = requester && requester.role === 2 && String(schedule.user) === String(requester.userId);
+        const isCreatorCaregiver = requester && requester.role === 3 && String(schedule.createdBy) === String(requester.userId);
+        if (!(isAdmin || isOwnerElder || isCreatorCaregiver)) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
+        await MedicationSchedule.findByIdAndDelete(req.params.id);
+        res.status(200).json({ message: 'Medication schedule deleted successfully' });
     } catch (error) {
         console.error('Error in deleteMedicationSchedule:', error);
-        res.status(500).json({ 
-            success: false,
-            message: error.message 
-        });
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -428,11 +463,21 @@ exports.updateScheduleStatus = async (req, res) => {
             });
         }
 
-        // Schedule ownership already validated by middleware (req.schedule is set)
-        const schedule = req.schedule;
+        // Authorization: only admin, elder (owner), or caregiver (creator)
+        const schedule = await MedicationSchedule.findOne({ scheduleId });
+        if (!schedule) {
+            return res.status(404).json({ success: false, message: 'Schedule not found' });
+        }
+        const requester = req.user;
+        const isAdmin = requester && requester.role === 1;
+        const isOwnerElder = requester && requester.role === 2 && String(schedule.user) === String(requester.userId);
+        const isCreatorCaregiver = requester && requester.role === 3 && String(schedule.createdBy) === String(requester.userId);
+        if (!(isAdmin || isOwnerElder || isCreatorCaregiver)) {
+            return res.status(403).json({ success: false, message: 'Access denied' });
+        }
 
         const result = await statusUpdateService.updateScheduleStatus(
-            schedule.scheduleId || scheduleId,
+            scheduleId,
             status,
             'manual',
             notes || ''
@@ -465,10 +510,20 @@ exports.getStatusHistory = async (req, res) => {
             });
         }
 
-        // Schedule ownership already validated by middleware (req.schedule is set)
-        const schedule = req.schedule;
+        // Authorization: only admin, elder (owner), or caregiver (creator)
+        const schedule = await MedicationSchedule.findOne({ scheduleId });
+        if (!schedule) {
+            return res.status(404).json({ success: false, message: 'Schedule not found' });
+        }
+        const requester = req.user;
+        const isAdmin = requester && requester.role === 1;
+        const isOwnerElder = requester && requester.role === 2 && String(schedule.user) === String(requester.userId);
+        const isCreatorCaregiver = requester && requester.role === 3 && String(schedule.createdBy) === String(requester.userId);
+        if (!(isAdmin || isOwnerElder || isCreatorCaregiver)) {
+            return res.status(403).json({ success: false, message: 'Access denied' });
+        }
 
-        const result = await statusUpdateService.getStatusHistory(schedule.scheduleId || scheduleId);
+        const result = await statusUpdateService.getStatusHistory(scheduleId);
 
         res.status(200).json({
             success: true,

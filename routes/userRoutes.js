@@ -6,9 +6,12 @@ const { protect, adminOnly, selfOrAdmin, adminOrSelf, caregiverOrSelf, caregiver
 // Public routes (no authentication required)
 router.post('/register', userController.registerUser);
 router.post('/login', userController.loginUser);
+router.post('/forgot-password', userController.forgotPassword);
+router.post('/reset-password', userController.resetPassword);
 
 // Protected routes (authentication required)
 router.get('/profile', protect, userController.getCurrentUser);
+router.post('/change-password', protect, userController.changePassword);
 // NOTE: :id refers to userId (auto-incremented), not _id
 router.get('/', protect, caregiverViewElders, userController.getAllUsers);
 router.get('/phone/:phone', protect, userController.getUserByPhone);

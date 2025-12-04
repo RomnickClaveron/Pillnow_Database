@@ -31,6 +31,15 @@ const userSchema = new mongoose.Schema({
         type: Number,
         enum: [1, 2, 3],
         required: true
+    },
+    // Password reset fields
+    resetToken: {
+        type: String,
+        default: null
+    },
+    resetTokenExpiry: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true

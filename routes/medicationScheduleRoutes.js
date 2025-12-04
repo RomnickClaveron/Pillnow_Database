@@ -2,10 +2,9 @@ const express = require('express');
 const router = express.Router();
 const medicationScheduleController = require('../controllers/medicationScheduleController');
 const { protect } = require('../middleware/authMiddleware');
-const { validateUserIdMatch, validateScheduleOwnership, validateCreateOwnership } = require('../middleware/scheduleAuthMiddleware');
 
 // Create a new medication schedule
-router.post('/', protect, validateCreateOwnership, medicationScheduleController.createMedicationSchedule);
+router.post('/', protect, medicationScheduleController.createMedicationSchedule);
 
 // Get all medication schedules
 router.get('/', protect, medicationScheduleController.getAllMedicationSchedules);
@@ -17,7 +16,7 @@ router.get('/test/connection', medicationScheduleController.testConnection);
 router.get('/debug/model', medicationScheduleController.debugModel);
 
 // Get medication schedules by user ID
-router.get('/user/:userId', protect, validateUserIdMatch, medicationScheduleController.getMedicationSchedulesByUserId);
+router.get('/user/:userId', protect, medicationScheduleController.getMedicationSchedulesByUserId);
 
 // Get medication schedules by medication ID
 router.get('/medication/:medicationId', protect, medicationScheduleController.getMedicationSchedulesByMedicationId);
@@ -29,21 +28,21 @@ router.get('/container/:containerId', protect, medicationScheduleController.getM
 router.get('/container/:containerId/summary', protect, medicationScheduleController.getContainerStatusSummary);
 
 // Get medication schedules by user and container
-router.get('/user/:userId/container/:containerId', protect, validateUserIdMatch, medicationScheduleController.getMedicationSchedulesByUserAndContainer);
+router.get('/user/:userId/container/:containerId', protect, medicationScheduleController.getMedicationSchedulesByUserAndContainer);
 
 // Update a medication schedule
-router.put('/:id', protect, validateScheduleOwnership, medicationScheduleController.updateMedicationSchedule);
+router.put('/:id', protect, medicationScheduleController.updateMedicationSchedule);
 
 // Delete a medication schedule
-router.delete('/:id', protect, validateScheduleOwnership, medicationScheduleController.deleteMedicationSchedule);
+router.delete('/:id', protect, medicationScheduleController.deleteMedicationSchedule);
 
 // ===== NEW STATUS UPDATE SYSTEM ROUTES =====
 
 // Manual status update
-router.post('/status/update', protect, validateScheduleOwnership, medicationScheduleController.updateScheduleStatus);
+router.post('/status/update', protect, medicationScheduleController.updateScheduleStatus);
 
 // Get status history for a schedule
-router.get('/status/history/:scheduleId', protect, validateScheduleOwnership, medicationScheduleController.getStatusHistory);
+router.get('/status/history/:scheduleId', protect, medicationScheduleController.getStatusHistory);
 
 // Get schedules that need notifications
 router.get('/notifications/pending', protect, medicationScheduleController.getSchedulesForNotification);
@@ -75,9 +74,9 @@ router.post('/notifications/stop-service', protect, medicationScheduleController
 router.post('/notifications/test', protect, medicationScheduleController.sendTestNotification);
 
 // Get user notification settings
-router.get('/notifications/settings/:userId', protect, validateUserIdMatch, medicationScheduleController.getUserNotificationSettings);
+router.get('/notifications/settings/:userId', protect, medicationScheduleController.getUserNotificationSettings);
 
 // Update user notification settings
-router.put('/notifications/settings/:userId', protect, validateUserIdMatch, medicationScheduleController.updateUserNotificationSettings);
+router.put('/notifications/settings/:userId', protect, medicationScheduleController.updateUserNotificationSettings);
 
 module.exports = router; 
